@@ -1,0 +1,489 @@
+---
+title: "DVP_required_viz"
+author: "Ankit"
+date: "2024-11-04"
+output: html_document
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+# Make relative paths work when rendering from this report/ folder
+knitr::opts_knit$set(root.dir = "..")
+```
+
+## Loading necessary libraries and checking the structure of the tables.
+
+```{r}
+library(dplyr)
+library(ggplot2)
+balls<- read.csv("data/deliveries.csv")
+matches<-read.csv("data/matches.csv")
+# Add a new column 'over' by extracting the integer part of 'ball'
+balls$over <- floor(balls$ball)
+str(balls)
+str(matches)
+
+```
+## Aggregating the values for runs/scored per over for a team
+
+```{r}
+# Aggregate average runs scored per team and per over
+team_runs_per_over <- balls %>%
+  group_by(batting_team, over) %>%
+  summarise(average_runs = mean(runs_off_bat, na.rm = TRUE)) %>%
+  ungroup()
+
+# Check the result
+head(team_runs_per_over)
+```
+## Converting values of runs scored per over per team into wide format to view over wise run distribution throughout the tournament.
+
+```{r}
+# Reshape the data: wide format where each column is the runs for each over
+team_runs_wide <- team_runs_per_over %>%
+  tidyr::pivot_wider(names_from = over, values_from = average_runs, values_fill = 0)
+```
+
+
+## Aggregating the values for wickets/taken per over for a team
+```{r}
+# Step 1: Count wickets per over for each bowling team
+team_wickets_per_over <- balls %>%
+  filter(!is.na(wicket_type) & wicket_type != "") %>%
+  group_by(bowling_team, over) %>%
+  summarise(wickets = n(), .groups = 'drop')
+
+# Step 2: Calculate the number of matches each bowling team played
+matches_per_team <- balls %>%
+  group_by(bowling_team, match_id) %>%
+  summarise() %>%
+  group_by(bowling_team) %>%
+  summarise(matches_played = n())
+
+# Step 3: Join matches_played with team_wickets_per_over and calculate average wickets per over
+team_wickets_avg_per_over <- team_wickets_per_over %>%
+  left_join(matches_per_team, by = "bowling_team") %>%
+  mutate(average_wickets = wickets / matches_played) %>%
+  select(bowling_team, over, average_wickets)
+
+# Reshape to wide format
+team_wickets_wide <- team_wickets_avg_per_over %>%
+  tidyr::pivot_wider(names_from = over, values_from = average_wickets, values_fill = 0)
+
+# Display the result
+print(team_wickets_wide)
+
+```
+
+
+## Calculate runs_per_match
+
+```{r}
+# Group by match_id and batting_team to get total runs per match
+runs_per_match <- balls %>%
+  group_by(match_id, batting_team) %>%
+  summarise(total_runs = sum(runs_off_bat + extras, na.rm = TRUE)) %>%
+  ungroup()
+
+# Calculate average runs per match for each team
+avg_runs_per_team <- runs_per_match %>%
+  group_by(batting_team) %>%
+  summarise(avg_runs = mean(total_runs, na.rm = TRUE)) %>%
+  rename(team = batting_team)
+
+```
+## Calculate dot_balls_faced
+
+```{r}
+# Filter for dot balls (runs_off_bat == 0 and extras == 0)
+dot_balls_faced <- balls %>%
+  filter(runs_off_bat == 0 & extras == 0) %>%
+  group_by(match_id, batting_team) %>%
+  summarise(dot_balls = n()) %>%
+  ungroup()
+
+# Calculate average dot balls faced per match for each team
+avg_dot_balls_per_team <- dot_balls_faced %>%
+  group_by(batting_team) %>%
+  summarise(avg_dot_balls = mean(dot_balls, na.rm = TRUE)) %>%
+  rename(team = batting_team)
+
+```
+## Calculate wickets_per_match
+
+```{r}
+# Filter rows where there was a wicket (wicket_type not NA or empty)
+wickets_per_match <- balls %>%
+  filter(!is.na(wicket_type) & wicket_type != "") %>%
+  group_by(match_id, bowling_team) %>%
+  summarise(total_wickets = n()) %>%
+  ungroup()
+
+# Calculate average wickets taken per match for each team
+avg_wickets_per_team <- wickets_per_match %>%
+  group_by(bowling_team) %>%
+  summarise(avg_wickets = mean(total_wickets, na.rm = TRUE)) %>%
+  rename(team = bowling_team)
+
+```
+
+
+## Calculate extras_per_match
+```{r}
+# Group by match_id and bowling_team to get total extras conceded per match
+extras_per_match <- balls %>%
+  group_by(match_id, bowling_team) %>%
+  summarise(total_extras = sum(extras, na.rm = TRUE)) %>%
+  ungroup()
+
+# Calculate average extras conceded per match for each team
+avg_extras_per_team <- extras_per_match %>%
+  group_by(bowling_team) %>%
+  summarise(avg_extras = mean(total_extras, na.rm = TRUE)) %>%
+  rename(team = bowling_team)
+
+```
+
+
+## Calculating wins/team in the tournament
+```{r}
+team_wins <- matches %>%
+  filter(winner != "") %>%   # Exclude matches without a winner (e.g., ties or abandoned)
+  group_by(winner) %>%
+  summarise(wins = n()) %>%
+  rename(team = winner)
+
+```
+
+
+
+##  Combine all the tables to create team_performance
+
+```{r}
+# Assuming `team_wins` is the table with columns 'team' and 'wins'
+team_performance <- avg_runs_per_team %>%
+  left_join(avg_dot_balls_per_team, by = "team") %>%
+  left_join(avg_wickets_per_team, by = "team") %>%
+  left_join(avg_extras_per_team, by = "team") %>%
+  left_join(team_wins, by = "team") # 'team_wins' contains team and wins columns
+
+```
+
+
+```{r}
+# Filter for boundaries (4s and 6s) and count them per match
+boundaries_per_match <- balls %>%
+  filter(runs_off_bat == 4 | runs_off_bat == 6) %>%
+  group_by(match_id, batting_team) %>%
+  summarise(boundaries = n()) %>%
+  ungroup()
+
+# Calculate average boundaries per match for each team
+avg_boundaries_per_team <- boundaries_per_match %>%
+  group_by(batting_team) %>%
+  summarise(avg_boundaries = mean(boundaries, na.rm = TRUE)) %>%
+  rename(team = batting_team)
+
+```
+```{r}
+team_performance <- team_performance %>%
+  left_join(avg_boundaries_per_team, by = "team")
+
+```
+
+
+```{r}
+str(team_performance)
+head(team_performance)
+```
+## Calculating ties and losses per team
+
+```{r}
+# Base set of teams
+all_teams <- team_performance %>% distinct(team)
+
+# Losses: count when a team appears in the match but is NOT the winner.
+# (This ignores abandoned/no-result matches where winner is blank.)
+losses <- matches %>%
+  filter(winner != "") %>%
+  mutate(
+    team1_loss = (team1 != winner),
+    team2_loss = (team2 != winner)
+  ) %>%
+  summarise(
+    losses_team1 = sum(team1_loss, na.rm = TRUE),
+    losses_team2 = sum(team2_loss, na.rm = TRUE)
+  )
+
+# Compute losses per team from match rows
+losses <- matches %>%
+  filter(winner != "") %>%
+  transmute(team = team1, loss = as.integer(team1 != winner)) %>%
+  bind_rows(matches %>% filter(winner != "") %>% transmute(team = team2, loss = as.integer(team2 != winner))) %>%
+  group_by(team) %>%
+  summarise(losses = sum(loss, na.rm = TRUE), .groups = 'drop')
+
+# Ties / no-result (if present in the dataset): treat rows with blank winner as tie/no-result
+# Note: Some datasets encode this differently; this provides a safe default.
+ties <- matches %>%
+  filter(winner == "") %>%
+  transmute(team = team1, tie = 1L) %>%
+  bind_rows(matches %>% filter(winner == "") %>% transmute(team = team2, tie = 1L)) %>%
+  group_by(team) %>%
+  summarise(ties = sum(tie, na.rm = TRUE), .groups = 'drop')
+
+# Ensure all teams exist with 0 defaults
+losses <- all_teams %>% left_join(losses, by = 'team') %>% mutate(losses = ifelse(is.na(losses), 0L, losses))
+ties   <- all_teams %>% left_join(ties,   by = 'team') %>% mutate(ties   = ifelse(is.na(ties),   0L, ties))
+
+# Join ties/losses into team_performance
+team_performance <- team_performance %>%
+  left_join(losses, by = 'team') %>%
+  left_join(ties, by = 'team')
+```
+
+```{r}
+str(team_performance)
+```
+
+## Calculating PCA for KPI's
+
+```{r}
+# Load necessary libraries
+library(dplyr)
+library(ggplot2)
+
+# Select KPIs and scale them
+kpi_data <- team_performance %>%
+  select(avg_runs, avg_wickets, avg_dot_balls, avg_extras, avg_boundaries) %>%
+  scale()
+
+# Perform PCA
+pca_result <- prcomp(kpi_data, center = TRUE, scale. = TRUE)
+
+# Add PCA scores and wins to a new data frame
+pca_scores <- as.data.frame(pca_result$x) %>%
+  mutate(team = team_performance$team,
+         wins = team_performance$wins)
+```
+
+## PC1 vs Wins
+
+```{r}
+# Scatter plot of PC1 vs Wins
+ggplot(pca_scores, aes(x = wins, y = PC1)) +
+  geom_point(size = 4, color = "blue") +
+  geom_text(aes(label = team), vjust = -1, size = 3) +
+  labs(title = "PC1 of Team Performance KPIs vs Wins",
+       x = "Wins",
+       y = "Principal Component 1 (PC1)") +
+  theme_minimal()
+
+```
+
+
+## PC1 vs PC2 colur coded by wins
+```{r}
+# Scatter plot of PC1 vs PC2, colored by wins
+ggplot(pca_scores, aes(x = PC1, y = PC2, color = wins)) +
+  geom_point(size = 4) +
+  geom_text(aes(label = team), vjust = -1, size = 3) +
+  scale_color_gradient(low = "blue", high = "red") +
+  labs(title = "PCA of Team Performance KPIs",
+       x = "Principal Component 1 (PC1)",
+       y = "Principal Component 2 (PC2)",
+       color = "Wins") +
+  theme_minimal()
+
+```
+
+
+## Checking variance explained by each PC
+```{r}
+# Calculate the proportion of variance explained by each principal component
+variance_explained <- summary(pca_result)$importance[2, ]
+
+# Create a data frame to display it in a table format
+variance_df <- data.frame(
+  PC = paste0("PC", 1:length(variance_explained)),
+  Variance_Explained = variance_explained
+)
+
+# Display the table
+print(variance_df)
+
+
+```
+
+
+```{r}
+str(team_runs_wide)
+str(team_wickets_wide)
+```
+
+## Boxplot of avg_runs_per_over for every venue 
+
+```{r}
+# Step 1: Calculate total runs per over for each match
+runs_per_over_per_match <- balls %>%
+  group_by(match_id, venue, over) %>%
+  summarise(runs_per_over = sum(runs_off_bat + extras, na.rm = TRUE)) %>%
+  ungroup()
+
+# Step 2: Calculate the number of matches played at each venue
+matches_per_venue <- balls %>%
+  select(match_id, venue) %>%
+  distinct() %>%
+  group_by(venue) %>%
+  summarise(matches_played = n())
+
+# Step 3: Join the data and calculate average runs per over by dividing by matches played
+average_runs_per_over_per_venue <- runs_per_over_per_match %>%
+  left_join(matches_per_venue, by = "venue") %>%
+  mutate(avg_runs_per_over = runs_per_over / matches_played)
+
+# Step 4: Create a boxplot
+ggplot(average_runs_per_over_per_venue, aes(x = venue, y = avg_runs_per_over)) +
+  geom_boxplot() +
+  labs(title = "Average Runs per Over per Match by Venue",
+       x = "Venue",
+       y = "Average Runs per Over") +
+  theme(axis.text.x = element_text(angle = 45, hjust = 1))
+
+
+```
+
+
+## Chord diagram data prep
+
+```{r}
+# Chord diagram
+# (needed for chordDiagram)
+library(circlize)
+```
+
+```{r}
+# install.packages("circlize")
+library(dplyr)
+
+# Calculate total runs per match
+runs_per_match <- balls %>%
+  group_by(match_id) %>%
+  summarise(total_runs = sum(runs_off_bat + extras, na.rm = TRUE), .groups = 'drop')
+
+# Merge total runs with match data
+matches_with_runs <- matches %>%
+  left_join(runs_per_match, by = c("match_number" = "match_id"))
+
+# Create a new standardized team pair column without altering original team columns
+matches_with_runs <- matches_with_runs %>%
+  mutate(team_pair = paste(pmin(team1, team2), pmax(team1, team2), sep = " vs "))
+
+# Aggregate results by `team_pair`
+matches_between_teams <- matches_with_runs %>%
+  group_by(team_pair) %>%
+  summarise(
+    num_matches = n(),
+    total_runs = sum(total_runs, na.rm = TRUE),
+    .groups = 'drop'
+  )
+
+# View the result
+matches_between_teams
+
+
+
+```
+
+
+```{r}
+# head(matches_between_teams)
+matches_between_teams <- matches %>%
+  # Sort team names alphabetically within each row
+  mutate(team1 = pmin(team1, team2),
+         team2 = pmax(team1, team2)) %>%
+  # Group by the unique match-up and count the number of matches
+  group_by(team1, team2) %>%
+  summarise(num_matches = n(), .groups = 'drop')
+
+
+```
+
+
+```{r}
+str(matches)
+str(balls)
+
+```
+
+## Chord diagram
+```{r}
+# Chord diagram
+# Ensure that matches_between_teams has the columns team1, team2, and num_matches
+chordDiagram(matches_between_teams, 
+             transparency = 0.5,
+             annotationTrack = "grid", 
+             preAllocateTracks = list(track.height = 0.1))
+
+
+# Add titles or labels if needed
+title("Matches Played Between Teams in the Tournament")
+
+```
+
+
+## Saving required tables as RDS files
+```{r}
+
+saveRDS(team_performance, "team_performance.rds")
+saveRDS(matches_between_teams, "matches_between_teams.rds")
+saveRDS(team_runs_wide, "team_runs_wide.rds")
+saveRDS(team_wickets_wide, "team_wickets_wide.rds")
+saveRDS(pca_scores, "pca_scores.rds")
+saveRDS(average_runs_per_over_per_venue,"average_runs_per_over_per_venue.rds")
+```
+
+## importing stadium latlong
+
+```{r}
+location <- read.csv("data/stadium-latlongs.csv")
+str(location)
+
+```
+
+## Adding attributes
+```{r}
+# Calculate total runs, total wickets, and total matches per venue from balls dataset
+venue_stats <- balls %>%
+    group_by(venue) %>%
+    summarise(
+        total_runs = sum(runs_off_bat + extras, na.rm = TRUE),
+        total_wickets = sum(!is.na(wicket_type) & wicket_type != ""),
+        total_matches = n_distinct(match_id)
+    )
+
+
+venue_stats <- venue_stats %>%
+    mutate(venue = sub(",.*", "", venue))
+
+
+# Merge these statistics with the location table
+location <- location %>%
+    left_join(venue_stats, by = "venue")
+
+
+
+```
+
+```{r}
+#head(venue_stats)
+str(location)
+
+#summary(location$Latitude)
+#summary(location$Longitude)
+
+```
+
+
+
+
