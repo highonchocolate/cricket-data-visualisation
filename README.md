@@ -8,15 +8,25 @@ Highlights:
 - Visual analysis with ggplot2
 - Chord diagram exploration of team matchups
 
-## Report screenshots
+## Dashboard screenshots
 
-Selected pages from the project report (dashboard + key visuals):
+These are screenshots of the final Tableau dashboard/views.
 
-<img src="https://raw.githubusercontent.com/highonchocolate/cricket-data-visualisation/main/docs/screenshots/report_page_03.png" width="900" />
-<img src="https://raw.githubusercontent.com/highonchocolate/cricket-data-visualisation/main/docs/screenshots/report_page_04.png" width="900" />
-<img src="https://raw.githubusercontent.com/highonchocolate/cricket-data-visualisation/main/docs/screenshots/report_page_05.png" width="900" />
-<img src="https://raw.githubusercontent.com/highonchocolate/cricket-data-visualisation/main/docs/screenshots/report_page_06.png" width="900" />
-<img src="https://raw.githubusercontent.com/highonchocolate/cricket-data-visualisation/main/docs/screenshots/report_page_07.png" width="900" />
+<img src="docs/screenshots/final/dashboard_01.png" width="900" />
+<img src="docs/screenshots/final/dashboard_02.png" width="900" />
+<img src="docs/screenshots/final/dashboard_03.png" width="900" />
+<img src="docs/screenshots/final/dashboard_04.png" width="900" />
+<img src="docs/screenshots/final/dashboard_05.png" width="900" />
+
+## Design process (Sheets 1–5)
+
+These pages show the design sheet process used to decide layout and visual choices.
+
+<img src="docs/screenshots/design/design_sheet_01.png" width="900" />
+<img src="docs/screenshots/design/design_sheet_02.png" width="900" />
+<img src="docs/screenshots/design/design_sheet_03.png" width="900" />
+<img src="docs/screenshots/design/design_sheet_04.png" width="900" />
+<img src="docs/screenshots/design/design_sheet_05.png" width="900" />
 
 ## How to run
 
