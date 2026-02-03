@@ -1,4 +1,4 @@
-# IPL Data Visualisation (R)
+# ICC T20 World Cup 2024 Data Visualisation (R)
 
 A data visualisation / analytics project built in **R** using ball-by-ball and match-level IPL data.
 
