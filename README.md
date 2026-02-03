@@ -12,11 +12,11 @@ Highlights:
 
 Selected pages from the project report (dashboard + key visuals):
 
-![Report page 3](docs/screenshots/report_page_03.png)
-![Report page 4](docs/screenshots/report_page_04.png)
-![Report page 5](docs/screenshots/report_page_05.png)
-![Report page 6](docs/screenshots/report_page_06.png)
-![Report page 7](docs/screenshots/report_page_07.png)
+<img src="https://raw.githubusercontent.com/highonchocolate/cricket-data-visualisation/main/docs/screenshots/report_page_03.png" width="900" />
+<img src="https://raw.githubusercontent.com/highonchocolate/cricket-data-visualisation/main/docs/screenshots/report_page_04.png" width="900" />
+<img src="https://raw.githubusercontent.com/highonchocolate/cricket-data-visualisation/main/docs/screenshots/report_page_05.png" width="900" />
+<img src="https://raw.githubusercontent.com/highonchocolate/cricket-data-visualisation/main/docs/screenshots/report_page_06.png" width="900" />
+<img src="https://raw.githubusercontent.com/highonchocolate/cricket-data-visualisation/main/docs/screenshots/report_page_07.png" width="900" />
 
 ## How to run
 
