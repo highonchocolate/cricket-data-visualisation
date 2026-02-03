@@ -10,7 +10,7 @@ Highlights:
 
 ## Report preview
 
-![Report preview](docs/screenshots/full.png)
+![Report preview](https://raw.githubusercontent.com/highonchocolate/cricket-data-visualisation/main/docs/screenshots/full.png)
 
 ## How to run
 
